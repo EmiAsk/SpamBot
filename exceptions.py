@@ -12,3 +12,7 @@ class CannotFindCaptcha(Exception):
 
 class CredentialsError(Exception):
     pass
+
+
+class SolvingCaptchaError(Exception):
+    pass

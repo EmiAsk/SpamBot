@@ -4,9 +4,10 @@ from telegram.ext import CommandHandler, CallbackQueryHandler
 from telegram.ext import Updater, Dispatcher
 
 from config import BOT_API_KEY
-from websites import Smm, SmmRaja, SmmIllusion, PeaKerr
+from websites import Smm, SmmRaja, SmmIllusion, PeaKerr, SmmKings, Wiq
 
-WEBSITES = {'Smm': Smm, 'SmmRaja': SmmRaja, 'SmmIllusion': SmmIllusion, 'PeaKerr': PeaKerr}
+WEBSITES = {'Smm': Smm, 'SmmRaja': SmmRaja, 'SmmIllusion': SmmIllusion, 'PeaKerr': PeaKerr,
+            'SmmKings': SmmKings, 'Wiq': Wiq}
 
 
 def start(update, context):
@@ -15,14 +16,19 @@ def start(update, context):
     update.message.reply_text(
         'Приветствую! Выберите сайт, на котором пройти авторизацию!',
         reply_markup=kb)
-    return 1
 
 
 def log_in_to_account(update: Update, context):
     call = update.callback_query
     name = call.data
     browser = WEBSITES[name]
-    call.message.edit_text('Проходим авторизацию на сайте ' + name + '. Дождитесь завершения!')
+    answer = 'Проходим авторизацию на сайте ' + name + '. Дождитесь завершения!'
+
+    if name in ('Wiq', 'SmmKings'):
+        answer += '\n\nДля входа на выбранном сайте необходимо пройти капчу,' \
+                  'поэтому авторизация может занять 1-3 минуты!'
+
+    call.message.edit_text(answer)
     login = browser().login()
     call.message.reply_text('Авторизация прошла успешно. Логин: ' + login)
 
