@@ -2,22 +2,19 @@ from abc import ABC, abstractmethod
 
 from bs4 import BeautifulSoup as BS
 from requests import Session
-# from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import Chrome, ChromeOptions
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.common.keys import Keys
-# from selenium.webdriver.support.wait import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
 
-from exceptions import *
-from utils import get_chrome_driver, solve_recaptcha_v2
 from config import get_credentials
+from exceptions import *
+from utils import solve_recaptcha_v2
 
 
 class Browser(ABC):
     def __init__(self):
-        self.browser: Chrome = get_chrome_driver()
         self.session = Session()
+        self.logged_in = False
+
+    def switch_status(self):
+        self.logged_in = True
 
     def close(self):
         self.session.close()
@@ -25,6 +22,10 @@ class Browser(ABC):
     @abstractmethod
     def login(self):
         """Log in to a particular website"""
+
+    @abstractmethod
+    def create_ticket(self) -> dict:
+        """Create ticket on a particular topic"""
 
     @staticmethod
     def get_csrf_token(bs: BS) -> str:
@@ -41,6 +42,8 @@ class Browser(ABC):
 class Smm(Browser):
     URL_MAIN = 'https://smm.net'
     URL_ACCOUNT = URL_MAIN + '/account'
+    URL_TICKET_REQUEST = URL_MAIN + '/ticket-create'
+    URL_TICKET = URL_MAIN + '/tickets'
     HOST = 'smm.net'
     NAME = 'Smm'
 
@@ -55,14 +58,14 @@ class Smm(Browser):
         bs = BS(source, 'html.parser')
         csrf = self.get_csrf_token(bs)
 
-        session.headers.update({
+        session.headers = {
             'Host': self.HOST,
             'Origin': 'https://smm.net',
             'Referer': 'https://smm.net/',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
                           ' AppleWebKit/537.36 (KHTML, like Gecko)'
                           ' Chrome/92.0.4515.131 YaBrowser/21.8.1.468 '
-                          'Yowser/2.5 Safari/537.36'})
+                          'Yowser/2.5 Safari/537.36'}
 
         credentials = get_credentials(self.NAME)
         data = {'LoginForm[username]': credentials[0],
@@ -87,10 +90,21 @@ class Smm(Browser):
 
         return elem.get('value')
 
+    def create_ticket(self):
+        response = self.session.get(self.URL_TICKET)
+        bs = BS(response.text, 'html.parser')
+        csrf = self.get_csrf_token(bs)
+        form_data = {'TicketForm[subject]': 'Hey there!',
+                     'TicketForm[message]': 'I don\'t need help',
+                     '_csrf': csrf}
+        response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
+        return response.json()
+
 
 class SmmRaja(Browser):
     URL_MAIN = 'https://www.smmraja.com/'
     URL_ACCOUNT = URL_MAIN + 'account'
+    URL_TICKET = URL_MAIN + 'tickets'
     NAME = 'SmmRaja'
 
     def login(self):
@@ -124,6 +138,7 @@ class SmmRaja(Browser):
 
         print('Logged in as ' + name)
 
+        self.switch_status()
         self.close()
         return name
 
@@ -134,10 +149,22 @@ class SmmRaja(Browser):
 
         return elem.getText().strip() if elem else None
 
+    def create_ticket(self):
+        response = self.session.get(self.URL_TICKET)
+        bs = BS(response.text, 'html.parser')
+        csrf = self.get_csrf_token(bs)
+        form_data = {'subject': 'Hey there!',
+                     'message': 'I don\'t need help',
+                     '_csrf': csrf}
+        response = self.session.post(self.URL_TICKET, data=form_data)
+        return response.json()
+
 
 class SmmIllusion(Browser):
     URL_MAIN = 'https://smmillusion.com/'
     URL_ACCOUNT = URL_MAIN + 'account'
+    URL_TICKET = URL_MAIN + 'tickets'
+    URL_TICKET_REQUEST = URL_MAIN + 'ticket-create'
     HOST = 'smmillusion.com'
     NAME = 'SmmIllusion'
 
@@ -174,6 +201,7 @@ class SmmIllusion(Browser):
 
         print('Logged in as ' + name)
 
+        self.switch_status()
         self.close()
         return name
 
@@ -184,10 +212,27 @@ class SmmIllusion(Browser):
 
         return elem.get('value')
 
+    def create_ticket(self):
+        response = self.session.get(self.URL_TICKET)
+        bs = BS(response.text, 'html.parser')
+        csrf = self.get_csrf_token(bs)
+        form_data = {'TicketForm[subject]': 'Other',
+                     'TicketForm[message]': 'I don\'t need help',
+                     '_csrf': csrf,
+                     'Transaction[ID]': '',
+                     'email[ID]': '',
+                     'addamount[ID]': ''
+                     }
+        response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
+        print(response.text)
+        return response.json()
+
 
 class PeaKerr(Browser):
     URL_MAIN = 'https://peakerr.com/'
     URL_ACCOUNT = URL_MAIN + 'account'
+    URL_TICKET_REQUEST = URL_MAIN + 'ticket-create'
+    URL_TICKET = URL_MAIN + 'tickets'
     HOST = 'peakerr.com'
     NAME = 'PeaKerr'
 
@@ -224,6 +269,7 @@ class PeaKerr(Browser):
 
         print('Logged in as ' + name)
 
+        self.switch_status()
         self.close()
         return name
 
@@ -234,11 +280,23 @@ class PeaKerr(Browser):
 
         return elem.get('value')
 
+    def create_ticket(self):
+        response = self.session.get(self.URL_TICKET)
+        bs = BS(response.text, 'html.parser')
+        csrf = self.get_csrf_token(bs)
+        form_data = {'TicketForm[subject]': 'Other',
+                     'TicketForm[message]': 'I don\'t need help',
+                     '_csrf': csrf}
+        response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
+        return response.json()
+
 
 class SmmKings(Browser):
     URL_MAIN = 'https://smmkings.com/'
     URL_ACCOUNT = URL_MAIN + 'account'
     URL_SIGN_UP = URL_MAIN + 'signup'
+    URL_TICKET_REQUEST = URL_MAIN + 'ticket-create'
+    URL_TICKET = URL_MAIN + 'tickets'
     NAME = 'SmmKings'
     HOST = 'smmkings.com'
 
@@ -282,6 +340,7 @@ class SmmKings(Browser):
 
         print('Logged in as ' + name)
 
+        self.switch_status()
         self.close()
         return name
 
@@ -291,11 +350,24 @@ class SmmKings(Browser):
         element = bs.select_one('span.text-capitalize')
         return element.getText()
 
+    def create_ticket(self):
+        response = self.session.get(self.URL_TICKET)
+        bs = BS(response.text, 'html.parser')
+        csrf = self.get_csrf_token(bs)
+        form_data = {'TicketForm[subject]': 'Other',
+                     'TicketForm[message]': 'I don\'t need help',
+                     '_csrf': csrf,
+                     'payment-method': '',
+                     'payment-code': ''}
+        response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
+        return response.json()
+
 
 class Wiq(Browser):
     URL_MAIN = 'https://wiq.ru/'
     URL_LOGIN = URL_MAIN + 'login.php'
     URL_REQUEST = URL_MAIN + 'requests.php'
+    URL_TICKET_REQUEST = URL_MAIN + 'tickets/api.php?action=createTicket'
     NAME = 'Wiq'
 
     def login(self):
@@ -332,6 +404,8 @@ class Wiq(Browser):
             raise CannotLoggedIn(self.__class__.__name__)
 
         print('Logged in as ' + name)
+
+        self.switch_status()
         self.close()
         return name
 
@@ -343,7 +417,44 @@ class Wiq(Browser):
 
         return elem.getText()[2:]
 
+    def create_ticket(self):
+        form_data = {'project_id': '1',
+                     'body': 'I don\'t need help',
+                     'title': 'Hey there'}
+        response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
+
+        return response.json()
+
+
+class BrowserController:
+    def __init__(self):
+        self._websites = {}
+        for ws in (SmmIllusion, SmmKings, Smm, SmmRaja, Wiq, PeaKerr):
+            self._websites[ws.NAME] = ws()
+
+    def login(self, website_name):
+        website = self._websites.get(website_name)
+        if website is None:
+            raise NameError
+        return website.login()
+
+    def create_ticket(self, website_name):
+        website = self._websites.get(website_name)
+        if website is None:
+            raise NameError
+        return website.create_ticket()
+
+    def check_if_logged_in(self, website_name):
+        website = self._websites.get(website_name)
+        if website is None:
+            raise NameError
+        return website.logged_in
+
+    def get_websites(self):
+        return tuple(self._websites.keys())
+
 
 if __name__ == '__main__':
-    smm = SmmKings()
+    smm = Wiq()
     smm.login()
+    print(smm.create_ticket())
