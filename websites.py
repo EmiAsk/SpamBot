@@ -430,8 +430,10 @@ class BrowserController:
     def __init__(self):
         self._websites = {}
         self.theme, self.message = '', ''
-        for ws in (SmmIllusion, SmmKings, Smm, SmmRaja, Wiq, PeaKerr):
+        self._names = []
+        for ws in (SmmIllusion, Smm, SmmRaja, PeaKerr, Wiq, SmmKings):
             self._websites[ws.NAME] = ws()
+            self._names.append(ws.NAME)
 
     def set_theme(self, theme: str):
         self.theme = theme
