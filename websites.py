@@ -24,7 +24,7 @@ class Browser(ABC):
         """Log in to a particular website"""
 
     @abstractmethod
-    def create_ticket(self) -> dict:
+    def create_ticket(self, theme, msg) -> dict:
         """Create ticket on a particular topic"""
 
     @staticmethod
@@ -90,12 +90,12 @@ class Smm(Browser):
 
         return elem.get('value')
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         response = self.session.get(self.URL_TICKET)
         bs = BS(response.text, 'html.parser')
         csrf = self.get_csrf_token(bs)
-        form_data = {'TicketForm[subject]': 'Hey there!',
-                     'TicketForm[message]': 'I don\'t need help',
+        form_data = {'TicketForm[subject]': theme,
+                     'TicketForm[message]': msg,
                      '_csrf': csrf}
         response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
         return response.json()
@@ -149,12 +149,12 @@ class SmmRaja(Browser):
 
         return elem.getText().strip() if elem else None
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         response = self.session.get(self.URL_TICKET)
         bs = BS(response.text, 'html.parser')
         csrf = self.get_csrf_token(bs)
-        form_data = {'subject': 'Hey there!',
-                     'message': 'I don\'t need help',
+        form_data = {'subject': theme,
+                     'message': msg,
                      '_csrf': csrf}
         response = self.session.post(self.URL_TICKET, data=form_data)
         return response.json()
@@ -212,19 +212,19 @@ class SmmIllusion(Browser):
 
         return elem.get('value')
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         response = self.session.get(self.URL_TICKET)
         bs = BS(response.text, 'html.parser')
         csrf = self.get_csrf_token(bs)
         form_data = {'TicketForm[subject]': 'Other',
-                     'TicketForm[message]': 'I don\'t need help',
+                     'TicketForm[message]': msg,
                      '_csrf': csrf,
                      'Transaction[ID]': '',
                      'email[ID]': '',
                      'addamount[ID]': ''
                      }
         response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
-        print(response.text)
+
         return response.json()
 
 
@@ -280,12 +280,12 @@ class PeaKerr(Browser):
 
         return elem.get('value')
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         response = self.session.get(self.URL_TICKET)
         bs = BS(response.text, 'html.parser')
         csrf = self.get_csrf_token(bs)
         form_data = {'TicketForm[subject]': 'Other',
-                     'TicketForm[message]': 'I don\'t need help',
+                     'TicketForm[message]': msg,
                      '_csrf': csrf}
         response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
         return response.json()
@@ -350,12 +350,12 @@ class SmmKings(Browser):
         element = bs.select_one('span.text-capitalize')
         return element.getText()
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         response = self.session.get(self.URL_TICKET)
         bs = BS(response.text, 'html.parser')
         csrf = self.get_csrf_token(bs)
         form_data = {'TicketForm[subject]': 'Other',
-                     'TicketForm[message]': 'I don\'t need help',
+                     'TicketForm[message]': msg,
                      '_csrf': csrf,
                      'payment-method': '',
                      'payment-code': ''}
@@ -417,10 +417,10 @@ class Wiq(Browser):
 
         return elem.getText()[2:]
 
-    def create_ticket(self):
+    def create_ticket(self, theme, msg):
         form_data = {'project_id': '1',
-                     'body': 'I don\'t need help',
-                     'title': 'Hey there'}
+                     'body': msg,
+                     'title': theme}
         response = self.session.post(self.URL_TICKET_REQUEST, data=form_data)
 
         return response.json()
@@ -429,8 +429,15 @@ class Wiq(Browser):
 class BrowserController:
     def __init__(self):
         self._websites = {}
+        self.theme, self.message = '', ''
         for ws in (SmmIllusion, SmmKings, Smm, SmmRaja, Wiq, PeaKerr):
             self._websites[ws.NAME] = ws()
+
+    def set_theme(self, theme: str):
+        self.theme = theme
+
+    def set_message(self, message: str):
+        self.message = message
 
     def login(self, website_name):
         website = self._websites.get(website_name)
@@ -442,7 +449,7 @@ class BrowserController:
         website = self._websites.get(website_name)
         if website is None:
             raise NameError
-        return website.create_ticket()
+        return website.create_ticket(theme=self.theme, msg=self.message)
 
     def check_if_logged_in(self, website_name):
         website = self._websites.get(website_name)
