@@ -16,16 +16,15 @@ websites = controller.get_websites()
 class SpamThread(Thread):
     def __init__(self):
         self.update = None
-        self._stop_event = False
+        self._stop_event = True
         self.notified_finish = True
         self.tasks = []
-        self.num = 0
+        self.num, self.n = 0, 1
         super().__init__(daemon=True)
 
     def add_task(self, tasks):
         self.tasks.clear()
         self.tasks.extend(tasks)
-        self.num = len(self.tasks)
         self._stop_event = False
         self.notified_finish = False
 
@@ -41,37 +40,34 @@ class SpamThread(Thread):
 
     def run(self):
         while True:
-            while self._stop_event:
+            if self._stop_event:
                 continue
 
-            n = 1
-            while self.tasks:
+            if self.tasks:
                 task = self.tasks.pop()
-
                 if task.lower() in ('wiq', 'smmkings'):
                     self.update.message.reply_text(f'\u26D4 Следующий сайт {task} '
                                                    f'требует прохождения капчи, поэтому '
                                                    f'авторизация может занять чуть больше времени!')
+                    continue
 
                 try:
                     name = controller.login(task)
+
                     message = controller.create_ticket(task)
 
-                    if not self._stop_event:
-                        self.update.message.reply_text(f'\u2705 {n}/{self.num}\n'
-                                                       f'Сайт {task} завершил '
-                                                       f'работу \n\n'
-                                                       f'Логин: {name}\n\n'
-                                                       f'Сообщение от сервера: {message}')
-                    n += 1
-                except Exception:
-                    self.update.message.reply_text(f'Во время рассылки на сайте {task},'
-                                                   f'произошла ошибка. Пропустили его.')
-                    continue
-            else:
-                if not self.notified_finish:
-                    self.update.message.reply_text('Спам рассылка закончилась')
-                    self.notified_finish = True
+                    self.update.message.reply_text(f'\u2705\n'
+                                                   f'Сайт {task} завершил '
+                                                   f'работу \n\n'
+                                                   f'Логин: {name}\n\n'
+                                                   f'Сообщение от сервера: {message}')
+                except Exception as er:
+                    self.update.message.reply_text(f'\u274C Во время рассылки на сайте {task},'
+                                                   f'произошла ошибка. Пропустили его.'
+                                                   f'\n\nОшибка:\n{er.__class__.__name__}: {er}')
+            elif not self.notified_finish:
+                self.update.message.reply_text('Спам рассылка закончилась')
+                self.notified_finish = True
 
 
 def cmd_start_spam(update, context):
@@ -102,7 +98,10 @@ def cmd_stop_spam(update, context):
     spam_thread.stop_event()
 
     update.message.reply_text(
-        'Вы остановили процесс рассылки!')
+        'Вы остановили процесс рассылки!\n\nВАЖНО! Перед началом новой, пожалуйста,'
+        'дождитесь обработки последнего сайта, то есть, если вы начнёте сразу же новую рассылку, '
+        'она не запустится сразу, так как в данный момент обрабатывается последний '
+        'сайт из предыдущей рассылки.')
 
 
 spam_thread = SpamThread()
