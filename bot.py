@@ -49,8 +49,6 @@ class SpamThread(Thread):
                     self.update.message.reply_text(f'\u26D4 Следующий сайт {task} '
                                                    f'требует прохождения капчи, поэтому '
                                                    f'авторизация может занять чуть больше времени!')
-                    continue
-
                 try:
                     name = controller.login(task)
 

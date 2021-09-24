@@ -431,7 +431,7 @@ class BrowserController:
         self._websites = {}
         self.theme, self.message = '', ''
         self._names = []
-        for ws in (SmmIllusion, Smm, SmmRaja, PeaKerr, Wiq, SmmKings):
+        for ws in (SmmIllusion, Smm, SmmRaja, PeaKerr, Wiq, SmmKings)[::-1]:
             self._websites[ws.NAME] = ws()
             self._names.append(ws.NAME)
 
@@ -460,7 +460,7 @@ class BrowserController:
         return website.logged_in
 
     def get_websites(self):
-        return tuple(self._websites.keys())
+        return self._names
 
 
 if __name__ == '__main__':
